@@ -1,0 +1,644 @@
+
+    <html lang="zh-CN">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+      <body class="nodata " style="">    
+     
+        <main style="width:100%">  
+        <div class="blog-content-box"> 
+            <div class="article-title-box">
+                <h1 class="title-article" id="articleContentId">Python NLP教程之知识图谱，从文本构建知识，实现从文本或在线文章中提取知识库的管道（教程含源码）</h1>
+            </div><div id="article_content" class="article_content clearfix">
+        <link rel="stylesheet" href="https://csdnimg.cn/release/blogv2/dist/mdeditor/css/editerView/kdoc_html_views-1a98987dfd.css">
+        <link rel="stylesheet" href="https://csdnimg.cn/release/blogv2/dist/mdeditor/css/editerView/ck_htmledit_views-044f2cf1dc.css">
+                <div id="content_views" class="markdown_views prism-atom-one-light">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <h2><a name="t0"></a><a id="_0"></a>准备开始？这就是我们要做的：</h2> 
+<ul><li>了解什么是知识库和知识图谱。</li><li>了解如何构建知识图谱以及REBEL模型的工作原理。</li><li>实现从文本中提取关系、构建知识图并将其可视化的完整管道。</li><li>使用Streamlit构建交互式演示并将其部署到Hugging Face Spaces。</li></ul> 
+<p>要尽早了解最终输出将是什么，请尝试这个Hugging Face Space上的演示。</p> 
+<p><img src="https://img-blog.csdnimg.cn/b2864dcf974c4e6f8b7ba525fcfa2fd4.png" alt="在这里插入图片描述"></p> 
+<p>以下是从 20 篇关于“Google”的新闻文章中提取的<a href="https://so.csdn.net/so/search?q=%E7%9F%A5%E8%AF%86%E5%9B%BE%E8%B0%B1&amp;spm=1001.2101.3001.7020" target="_blank" class="hl hl-1" data-report-view="{&quot;spm&quot;:&quot;1001.2101.3001.7020&quot;,&quot;dest&quot;:&quot;https://so.csdn.net/so/search?q=%E7%9F%A5%E8%AF%86%E5%9B%BE%E8%B0%B1&amp;spm=1001.2101.3001.7020&quot;,&quot;extra&quot;:&quot;{\&quot;searchword\&quot;:\&quot;知识图谱\&quot;}&quot;}" data-report-click="{&quot;spm&quot;:&quot;1001.2101.3001.7020&quot;,&quot;dest&quot;:&quot;https://so.csdn.net/so/search?q=%E7%9F%A5%E8%AF%86%E5%9B%BE%E8%B0%B1&amp;spm=1001.2101.3001.7020&quot;,&quot;extra&quot;:&quot;{\&quot;searchword\&quot;:\&quot;知识图谱\&quot;}&quot;}" data-tit="知识图谱" data-pretit="知识图谱">知识图谱</a>示例。在本指南的最后，您将能够从您喜欢的任何文章列表中构建知识图谱。</p> 
+<p><img src="https://img-blog.csdnimg.cn/16014d8e575942bb82666ccef7f7c134.png" alt="在这里插入图片描述"></p> 
+<p><img src="https://img-blog.csdnimg.cn/cf7f27141d8941feb54e62a9fd66898a.png" alt="在这里插入图片描述"><br> 开始吧！</p> 
+<h2><a name="t1"></a><a id="_20"></a><a href="https://so.csdn.net/so/search?q=%E7%9F%A5%E8%AF%86%E5%BA%93&amp;spm=1001.2101.3001.7020" target="_blank" class="hl hl-1" data-report-view="{&quot;spm&quot;:&quot;1001.2101.3001.7020&quot;,&quot;dest&quot;:&quot;https://so.csdn.net/so/search?q=%E7%9F%A5%E8%AF%86%E5%BA%93&amp;spm=1001.2101.3001.7020&quot;,&quot;extra&quot;:&quot;{\&quot;searchword\&quot;:\&quot;知识库\&quot;}&quot;}" data-report-click="{&quot;spm&quot;:&quot;1001.2101.3001.7020&quot;,&quot;dest&quot;:&quot;https://so.csdn.net/so/search?q=%E7%9F%A5%E8%AF%86%E5%BA%93&amp;spm=1001.2101.3001.7020&quot;,&quot;extra&quot;:&quot;{\&quot;searchword\&quot;:\&quot;知识库\&quot;}&quot;}" data-tit="知识库" data-pretit="知识库">知识库</a>和知识图</h2> 
+<p>知识库 (KB)是存储为<a href="https://so.csdn.net/so/search?q=%E7%BB%93%E6%9E%84%E5%8C%96%E6%95%B0%E6%8D%AE&amp;spm=1001.2101.3001.7020" target="_blank" class="hl hl-1" data-report-view="{&quot;spm&quot;:&quot;1001.2101.3001.7020&quot;,&quot;dest&quot;:&quot;https://so.csdn.net/so/search?q=%E7%BB%93%E6%9E%84%E5%8C%96%E6%95%B0%E6%8D%AE&amp;spm=1001.2101.3001.7020&quot;,&quot;extra&quot;:&quot;{\&quot;searchword\&quot;:\&quot;结构化数据\&quot;}&quot;}" data-report-click="{&quot;spm&quot;:&quot;1001.2101.3001.7020&quot;,&quot;dest&quot;:&quot;https://so.csdn.net/so/search?q=%E7%BB%93%E6%9E%84%E5%8C%96%E6%95%B0%E6%8D%AE&amp;spm=1001.2101.3001.7020&quot;,&quot;extra&quot;:&quot;{\&quot;searchword\&quot;:\&quot;结构化数据\&quot;}&quot;}" data-tit="结构化数据" data-pretit="结构化数据">结构化数据</a>的信息，可随时用于分析或推理。通常，KB 存储为图（即知识图），其中节点是实体，边是实体之间的关系。</p> 
+<p>例如，从文本“Fabio living in Italy”中，我们可以提取关系三元组&lt;Fabio, lives in, Italy&gt;，其中“Fabio”和“Italy”是实体。</p> 
+<p>从原始文本中提取关系三元组是信息提取中的一项关键任务，支持多种应用，例如填充或验证知识库、事实检查和其他下游任务。</p> 
+<h2><a name="t2"></a><a id="_27"></a>如何构建知识图谱</h2> 
+<p>要从文本构建知识图谱，我们通常需要执行两个步骤：</p> 
+<p>提取实体，即命名实体识别 (NER)，它们将成为知识图谱的节点。<br> 提取实体之间的关系，即关系分类 (RC)，它们将成为知识图谱的边缘。<br> 这些多步骤管道通常会传播错误或仅限于少数关系类型。最近，已经提出了端到端的方法来同时处理这两个任务。此任务通常称为关系提取 (RE)。在本文中，我们将使用名为 REBEL 的端到端模型，来自论文Relation Extraction By End-to-end Language generation。</p> 
+<h2><a name="t3"></a><a id="REBEL__34"></a>REBEL 的工作原理</h2> 
+<p>REBEL 是一个 text2text 模型，由通天塔通过微调巴特用于将包含实体和隐含关系的原始输入句子翻译成一组明确引用这些关系的三元组。它已经接受了超过 200 种不同关系类型的训练.</p> 
+<p>作者为 REBEL 预训练创建了一个自定义数据集，使用 Wikipedia abstracts 和Wikidata中的实体和关系，并使用RoBERTa 自然语言推理模型（类似于此模型）过滤它们。查看论文以了解有关数据集创建过程的更多信息。作者还在Hugging Face Hub 上发布了他们的数据集。</p> 
+<p>该模型在一系列关系提取和关系分类基准上表现良好。</p> 
+<p>您可以在 Hugging Face Hub 中找到REBEL。</p> 
+<h2><a name="t4"></a><a id="_44"></a>实施知识图谱提取管道</h2> 
+<p>以下是我们要做的事情，逐步解决更复杂的情况：</p> 
+<p>加载关系提取 REBEL 模型。<br> 从短文本中提取知识库。<br> 从长文本中提取知识库。<br> 过滤和规范化实体。<br> 从特定 URL 的文章中提取知识库。<br> 从多个 URL 中提取知识库。<br> 可视化知识库。<br> 您可以在此Colab中找到完整的代码。</p> 
+<p>首先，我们安装所需的库。</p> 
+<pre data-index="0" class="set-code-show prettyprint"><code class="has-numbering" onclick="mdcp.copyCode(event)" style="position: unset;">pip install transformers wikipedia newspaper3k GoogleNews pyvis
+<div class="hljs-button {2}" data-title="复制"></div></code><ul class="pre-numbering" style=""><li style="color: rgb(153, 153, 153);">1</li></ul></pre> 
+<p>我们需要每个库的原因如下：</p> 
+<p>transformers：加载 REBEL 模式。<br> wikipedia：通过检查提取的实体是否具有相应的 Wikipedia 页面来验证它们。<br> newspaper：从 URL 解析文章。<br> GoogleNews：阅读有关某个主题的 Google 新闻最新文章。<br> pyvis：图形可视化。</p> 
+<p>让我们导入所有必要的库和类</p> 
+<pre data-index="1" class="set-code-show prettyprint"><code class="has-numbering" onclick="mdcp.copyCode(event)" style="position: unset;">from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
+import math
+import torch
+import wikipedia
+from newspaper import Article, ArticleException
+from GoogleNews import GoogleNews
+import IPython
+from pyvis.network import Network
+<div class="hljs-button {2}" data-title="复制"></div></code><ul class="pre-numbering" style=""><li style="color: rgb(153, 153, 153);">1</li><li style="color: rgb(153, 153, 153);">2</li><li style="color: rgb(153, 153, 153);">3</li><li style="color: rgb(153, 153, 153);">4</li><li style="color: rgb(153, 153, 153);">5</li><li style="color: rgb(153, 153, 153);">6</li><li style="color: rgb(153, 153, 153);">7</li><li style="color: rgb(153, 153, 153);">8</li></ul></pre> 
+<h2><a name="t5"></a><a id="_84"></a>加载关系提取模型</h2> 
+<p>多亏了这个transformers库，我们可以用几行代码加载预训练的 REBEL 模型和分词器。</p> 
+<pre data-index="2" class="set-code-show prettyprint"><code class="has-numbering" onclick="mdcp.copyCode(event)" style="position: unset;"># Load model and tokenizer
+tokenizer = AutoTokenizer.from_pretrained("Babelscape/rebel-large")
+model = AutoModelForSeq2SeqLM.from_pretrained("Babelscape/rebel-large")
+<div class="hljs-button {2}" data-title="复制"></div></code><ul class="pre-numbering" style=""><li style="color: rgb(153, 153, 153);">1</li><li style="color: rgb(153, 153, 153);">2</li><li style="color: rgb(153, 153, 153);">3</li></ul></pre> 
+<h2><a name="t6"></a><a id="_92"></a>从短文本到知识库</h2> 
+<p>下一步是编写一个函数，该函数能够解析 REBEL 生成的字符串并将它们转换为关系三元组（例如&lt;Fabio, lives in, Italy三元组）。此函数必须考虑在训练模型时使用的其他新标记（即 、 和标记）。幸运的是，REBEL 模型卡为我们提供了这个函数的完整代码示例，我们将按原样使用它。</p> 
+<pre data-index="3" class="prettyprint set-code-show"><code class="has-numbering" onclick="mdcp.copyCode(event)" style="position: unset;">def extract_relations_from_model_output(text):
+    relations = []
+    relation, subject, relation, object_ = '', '', '', ''
+    text = text.strip()
+    current = 'x'
+    text_replaced = text.replace("&lt;s&gt;", "").replace("&lt;pad&gt;", "").replace("&lt;/s&gt;", "")
+    for token in text_replaced.split():
+        if token == "&lt;triplet&gt;":
+            current = 't'
+            if relation != '':
+                relations.append({
+                    'head': subject.strip(),
+                    'type': relation.strip(),
+                    'tail': object_.strip()
+                })
+                relation = ''
+            subject = ''
+        elif token == "&lt;subj&gt;":
+            current = 's'
+            if relation != '':
+                relations.append({
+                    'head': subject.strip(),
+                    'type': relation.strip(),
+                    'tail': object_.strip()
+                })
+            object_ = ''
+        elif token == "&lt;obj&gt;":
+            current = 'o'
+            relation = ''
+        else:
+            if current == 't':
+                subject += ' ' + token
+            elif current == 's':
+                object_ += ' ' + token
+            elif current == 'o':
+                relation += ' ' + token
+    if subject != '' and relation != '' and object_ != '':
+        relations.append({
+            'head': subject.strip(),
+            'type': relation.strip(),
+            'tail': object_.strip()
+        })
+    return relations
+<div class="hljs-button {2}" data-title="复制"></div></code><ul class="pre-numbering" style=""><li style="color: rgb(153, 153, 153);">1</li><li style="color: rgb(153, 153, 153);">2</li><li style="color: rgb(153, 153, 153);">3</li><li style="color: rgb(153, 153, 153);">4</li><li style="color: rgb(153, 153, 153);">5</li><li style="color: rgb(153, 153, 153);">6</li><li style="color: rgb(153, 153, 153);">7</li><li style="color: rgb(153, 153, 153);">8</li><li style="color: rgb(153, 153, 153);">9</li><li style="color: rgb(153, 153, 153);">10</li><li style="color: rgb(153, 153, 153);">11</li><li style="color: rgb(153, 153, 153);">12</li><li style="color: rgb(153, 153, 153);">13</li><li style="color: rgb(153, 153, 153);">14</li><li style="color: rgb(153, 153, 153);">15</li><li style="color: rgb(153, 153, 153);">16</li><li style="color: rgb(153, 153, 153);">17</li><li style="color: rgb(153, 153, 153);">18</li><li style="color: rgb(153, 153, 153);">19</li><li style="color: rgb(153, 153, 153);">20</li><li style="color: rgb(153, 153, 153);">21</li><li style="color: rgb(153, 153, 153);">22</li><li style="color: rgb(153, 153, 153);">23</li><li style="color: rgb(153, 153, 153);">24</li><li style="color: rgb(153, 153, 153);">25</li><li style="color: rgb(153, 153, 153);">26</li><li style="color: rgb(153, 153, 153);">27</li><li style="color: rgb(153, 153, 153);">28</li><li style="color: rgb(153, 153, 153);">29</li><li style="color: rgb(153, 153, 153);">30</li><li style="color: rgb(153, 153, 153);">31</li><li style="color: rgb(153, 153, 153);">32</li><li style="color: rgb(153, 153, 153);">33</li><li style="color: rgb(153, 153, 153);">34</li><li style="color: rgb(153, 153, 153);">35</li><li style="color: rgb(153, 153, 153);">36</li><li style="color: rgb(153, 153, 153);">37</li><li style="color: rgb(153, 153, 153);">38</li><li style="color: rgb(153, 153, 153);">39</li><li style="color: rgb(153, 153, 153);">40</li><li style="color: rgb(153, 153, 153);">41</li><li style="color: rgb(153, 153, 153);">42</li><li style="color: rgb(153, 153, 153);">43</li></ul></pre> 
+<p>该函数输出一个关系列表，其中每个关系都表示为具有以下键的字典：</p> 
+<ul><li>head：关系的主题（例如“Fabio”）。</li><li>type：关系类型（例如“居住在”）。</li><li>tail：关系的对象（例如“意大利”）。</li></ul> 
+<p>接下来，让我们编写实现知识库类的代码。我们的KB类由关系列表组成，并且有几种方法来处理向知识库添加新关系或打印它们。目前它实现了一个非常简单的逻辑。</p> 
+<pre data-index="4" class="prettyprint set-code-show"><code class="has-numbering" onclick="mdcp.copyCode(event)" style="position: unset;">class KB():
+    def __init__(self):
+        self.relations = []
+
+    def are_relations_equal(self, r1, r2):
+        return all(r1[attr] == r2[attr] for attr in ["head", "type", "tail"])
+
+    def exists_relation(self, r1):
+        return any(self.are_relations_equal(r1, r2) for r2 in self.relations)
+
+    def add_relation(self, r):
+        if not self.exists_relation(r):
+            self.relations.append(r)
+
+    def print(self):
+        print("Relations:")
+        for r in self.relations:
+            print(f"  {r}")
+<div class="hljs-button {2}" data-title="复制"></div></code><ul class="pre-numbering" style=""><li style="color: rgb(153, 153, 153);">1</li><li style="color: rgb(153, 153, 153);">2</li><li style="color: rgb(153, 153, 153);">3</li><li style="color: rgb(153, 153, 153);">4</li><li style="color: rgb(153, 153, 153);">5</li><li style="color: rgb(153, 153, 153);">6</li><li style="color: rgb(153, 153, 153);">7</li><li style="color: rgb(153, 153, 153);">8</li><li style="color: rgb(153, 153, 153);">9</li><li style="color: rgb(153, 153, 153);">10</li><li style="color: rgb(153, 153, 153);">11</li><li style="color: rgb(153, 153, 153);">12</li><li style="color: rgb(153, 153, 153);">13</li><li style="color: rgb(153, 153, 153);">14</li><li style="color: rgb(153, 153, 153);">15</li><li style="color: rgb(153, 153, 153);">16</li><li style="color: rgb(153, 153, 153);">17</li><li style="color: rgb(153, 153, 153);">18</li></ul></pre> 
+<p>最后，我们定义了一个from_small_text_to_kb函数，该函数返回一个KB对象，该对象具有从短文本中提取的关系。它执行以下操作：</p> 
+<ul><li>初始化一个空的知识库KB对象。</li><li>标记输入文本。</li><li>使用 REBEL 从文本中生成关系。</li><li>解析 REBEL 输出并将关系三元组存储到知识库对象中。</li><li>返回知识库对象。</li></ul> 
+<pre data-index="5" class="prettyprint set-code-show"><code class="has-numbering" onclick="mdcp.copyCode(event)" style="position: unset;">def from_small_text_to_kb(text, verbose=False):
+    kb = KB()
+
+    # Tokenizer text
+    model_inputs = tokenizer(text, max_length=512, padding=True, truncation=True,
+                            return_tensors='pt')
+    if verbose:
+        print(f"Num tokens: {len(model_inputs['input_ids'][0])}")
+
+    # Generate
+    gen_kwargs = {
+        "max_length": 216,
+        "length_penalty": 0,
+        "num_beams": 3,
+        "num_return_sequences": 3
+    }
+    generated_tokens = model.generate(
+        **model_inputs,
+        **gen_kwargs,
+    )
+    decoded_preds = tokenizer.batch_decode(generated_tokens, skip_special_tokens=False)
+
+    # create kb
+    for sentence_pred in decoded_preds:
+        relations = extract_relations_from_model_output(sentence_pred)
+        for r in relations:
+            kb.add_relation(r)
+
+    return kb
+<div class="hljs-button {2}" data-title="复制"></div></code><ul class="pre-numbering" style=""><li style="color: rgb(153, 153, 153);">1</li><li style="color: rgb(153, 153, 153);">2</li><li style="color: rgb(153, 153, 153);">3</li><li style="color: rgb(153, 153, 153);">4</li><li style="color: rgb(153, 153, 153);">5</li><li style="color: rgb(153, 153, 153);">6</li><li style="color: rgb(153, 153, 153);">7</li><li style="color: rgb(153, 153, 153);">8</li><li style="color: rgb(153, 153, 153);">9</li><li style="color: rgb(153, 153, 153);">10</li><li style="color: rgb(153, 153, 153);">11</li><li style="color: rgb(153, 153, 153);">12</li><li style="color: rgb(153, 153, 153);">13</li><li style="color: rgb(153, 153, 153);">14</li><li style="color: rgb(153, 153, 153);">15</li><li style="color: rgb(153, 153, 153);">16</li><li style="color: rgb(153, 153, 153);">17</li><li style="color: rgb(153, 153, 153);">18</li><li style="color: rgb(153, 153, 153);">19</li><li style="color: rgb(153, 153, 153);">20</li><li style="color: rgb(153, 153, 153);">21</li><li style="color: rgb(153, 153, 153);">22</li><li style="color: rgb(153, 153, 153);">23</li><li style="color: rgb(153, 153, 153);">24</li><li style="color: rgb(153, 153, 153);">25</li><li style="color: rgb(153, 153, 153);">26</li><li style="color: rgb(153, 153, 153);">27</li><li style="color: rgb(153, 153, 153);">28</li><li style="color: rgb(153, 153, 153);">29</li></ul></pre> 
+<p>让我们用来自维基百科的一些关于拿破仑波拿巴的文字来试试这个功能。</p> 
+<pre data-index="6" class="prettyprint set-code-show"><code class="has-numbering" onclick="mdcp.copyCode(event)" style="position: unset;">text = "Napoleon Bonaparte (born Napoleone di Buonaparte; 15 August 1769 – 5 " \
+"May 1821), and later known by his regnal name Napoleon I, was a French military " \
+"and political leader who rose to prominence during the French Revolution and led " \
+"several successful campaigns during the Revolutionary Wars. He was the de facto " \
+"leader of the French Republic as First Consul from 1799 to 1804. As Napoleon I, " \
+"he was Emperor of the French from 1804 until 1814 and again in 1815. Napoleon's " \
+"political and cultural legacy has endured, and he has been one of the most " \
+"celebrated and controversial leaders in world history."
+
+kb = from_small_text_to_kb(text, verbose=True)
+kb.print()
+# Num tokens: 133
+# Relations:
+#   {'head': 'Napoleon Bonaparte', 'type': 'date of birth', 'tail': '15 August 1769'}
+#   {'head': 'Napoleon Bonaparte', 'type': 'date of death', 'tail': '5 May 1821'}
+#   {'head': 'Napoleon Bonaparte', 'type': 'participant in', 'tail': 'French Revolution'}
+#   {'head': 'Napoleon Bonaparte', 'type': 'conflict', 'tail': 'Revolutionary Wars'}
+#   {'head': 'Revolutionary Wars', 'type': 'part of', 'tail': 'French Revolution'}
+#   {'head': 'French Revolution', 'type': 'participant', 'tail': 'Napoleon Bonaparte'}
+#   {'head': 'Revolutionary Wars', 'type': 'participant', 'tail': 'Napoleon Bonaparte'}
+<div class="hljs-button {2}" data-title="复制"></div></code><ul class="pre-numbering" style=""><li style="color: rgb(153, 153, 153);">1</li><li style="color: rgb(153, 153, 153);">2</li><li style="color: rgb(153, 153, 153);">3</li><li style="color: rgb(153, 153, 153);">4</li><li style="color: rgb(153, 153, 153);">5</li><li style="color: rgb(153, 153, 153);">6</li><li style="color: rgb(153, 153, 153);">7</li><li style="color: rgb(153, 153, 153);">8</li><li style="color: rgb(153, 153, 153);">9</li><li style="color: rgb(153, 153, 153);">10</li><li style="color: rgb(153, 153, 153);">11</li><li style="color: rgb(153, 153, 153);">12</li><li style="color: rgb(153, 153, 153);">13</li><li style="color: rgb(153, 153, 153);">14</li><li style="color: rgb(153, 153, 153);">15</li><li style="color: rgb(153, 153, 153);">16</li><li style="color: rgb(153, 153, 153);">17</li><li style="color: rgb(153, 153, 153);">18</li><li style="color: rgb(153, 153, 153);">19</li><li style="color: rgb(153, 153, 153);">20</li></ul></pre> 
+<p>该模型能够提取几个关系，例如拿破仑的出生日期和死亡日期，以及他对法国大革命的参与。好的！</p> 
+<h2><a name="t7"></a><a id="_237"></a>从长文本到知识库</h2> 
+<p>像 REBEL 这样​​的 Transformer 模型的内存需求会随着输入的大小呈二次方增长。这意味着 REBEL 能够以合理的速度在通用硬件上工作，输入大约 512 个令牌，对应于大约 380 个英文单词。但是，我们可能需要从数千个单词的文档中提取关系。</p> 
+<p>此外，从我对该模型的实验来看，它似乎在较短的输入下效果更好。直观地说，原始文本关系通常用单个或连续的句子表示，因此可能没有必要同时考虑大量句子来提取特定关系。此外，提取一些关系比提取许多关系更简单。</p> 
+<p>那么，我们如何将所有这些放在一起呢？</p> 
+<p>例如，我们可以将一个长 1000 个标记的输入文本分成八个较短的重叠跨度，长 128 个标记，并从每个跨度中提取关系。在这样做的同时，我们还将一些元数据添加到包含其跨度边界的提取关系中。有了这些信息，我们可以看到我们从文本的哪个跨度中提取了一个特定的关系，该关系现在保存在我们的知识库中。</p> 
+<p>让我们修改KB方法，以便同时保存跨度边界。关系字典现在有键：</p> 
+<ul><li>head：关系的主题（例如“Fabio”）。</li><li>type：关系类型（例如“居住在”）。</li><li>tail：关系的对象（例如“意大利”）。</li><li>meta：包含有关关系的元信息的字典。该字典有一个键，其值是已找到关系spans的跨度边界列表（例如[[0, 128], [119, 247]] ）。</li></ul> 
+<pre data-index="7" class="set-code-show prettyprint"><code class="has-numbering" onclick="mdcp.copyCode(event)" style="position: unset;">class KB():
+    ...
+
+    def merge_relations(self, r1):
+        r2 = [r for r in self.relations
+              if self.are_relations_equal(r1, r)][0]
+        spans_to_add = [span for span in r1["meta"]["spans"]
+                        if span not in r2["meta"]["spans"]]
+        r2["meta"]["spans"] += spans_to_add
+
+    def add_relation(self, r):
+        if not self.exists_relation(r):
+            self.relations.append(r)
+        else:
+            self.merge_relations(r)
+<div class="hljs-button {2}" data-title="复制"></div></code><ul class="pre-numbering" style=""><li style="color: rgb(153, 153, 153);">1</li><li style="color: rgb(153, 153, 153);">2</li><li style="color: rgb(153, 153, 153);">3</li><li style="color: rgb(153, 153, 153);">4</li><li style="color: rgb(153, 153, 153);">5</li><li style="color: rgb(153, 153, 153);">6</li><li style="color: rgb(153, 153, 153);">7</li><li style="color: rgb(153, 153, 153);">8</li><li style="color: rgb(153, 153, 153);">9</li><li style="color: rgb(153, 153, 153);">10</li><li style="color: rgb(153, 153, 153);">11</li><li style="color: rgb(153, 153, 153);">12</li><li style="color: rgb(153, 153, 153);">13</li><li style="color: rgb(153, 153, 153);">14</li><li style="color: rgb(153, 153, 153);">15</li></ul></pre> 
+<p>接下来，我们编写from_text_to_kb函数，它与from_small_text_to_kb函数类似，但能够通过将较长的文本拆分为 span 来管理它们。所有新代码都是关于跨度逻辑和跨度到关系的管理。</p> 
+<pre data-index="8" class="prettyprint set-code-show"><code class="has-numbering" onclick="mdcp.copyCode(event)" style="position: unset;">def from_text_to_kb(text, span_length=128, verbose=False):
+    # tokenize whole text
+    inputs = tokenizer([text], return_tensors="pt")
+
+    # compute span boundaries
+    num_tokens = len(inputs["input_ids"][0])
+    if verbose:
+        print(f"Input has {num_tokens} tokens")
+    num_spans = math.ceil(num_tokens / span_length)
+    if verbose:
+        print(f"Input has {num_spans} spans")
+    overlap = math.ceil((num_spans * span_length - num_tokens) / 
+                        max(num_spans - 1, 1))
+    spans_boundaries = []
+    start = 0
+    for i in range(num_spans):
+        spans_boundaries.append([start + span_length * i,
+                                 start + span_length * (i + 1)])
+        start -= overlap
+    if verbose:
+        print(f"Span boundaries are {spans_boundaries}")
+
+    # transform input with spans
+    tensor_ids = [inputs["input_ids"][0][boundary[0]:boundary[1]]
+                  for boundary in spans_boundaries]
+    tensor_masks = [inputs["attention_mask"][0][boundary[0]:boundary[1]]
+                    for boundary in spans_boundaries]
+    inputs = {
+        "input_ids": torch.stack(tensor_ids),
+        "attention_mask": torch.stack(tensor_masks)
+    }
+
+    # generate relations
+    num_return_sequences = 3
+    gen_kwargs = {
+        "max_length": 256,
+        "length_penalty": 0,
+        "num_beams": 3,
+        "num_return_sequences": num_return_sequences
+    }
+    generated_tokens = model.generate(
+        **inputs,
+        **gen_kwargs,
+    )
+
+    # decode relations
+    decoded_preds = tokenizer.batch_decode(generated_tokens,
+                                           skip_special_tokens=False)
+
+    # create kb
+    kb = KB()
+    i = 0
+    for sentence_pred in decoded_preds:
+        current_span_index = i // num_return_sequences
+        relations = extract_relations_from_model_output(sentence_pred)
+        for relation in relations:
+            relation["meta"] = {
+                "spans": [spans_boundaries[current_span_index]]
+            }
+            kb.add_relation(relation)
+        i += 1
+
+    return kb
+<div class="hljs-button {2}" data-title="复制"></div></code><ul class="pre-numbering" style=""><li style="color: rgb(153, 153, 153);">1</li><li style="color: rgb(153, 153, 153);">2</li><li style="color: rgb(153, 153, 153);">3</li><li style="color: rgb(153, 153, 153);">4</li><li style="color: rgb(153, 153, 153);">5</li><li style="color: rgb(153, 153, 153);">6</li><li style="color: rgb(153, 153, 153);">7</li><li style="color: rgb(153, 153, 153);">8</li><li style="color: rgb(153, 153, 153);">9</li><li style="color: rgb(153, 153, 153);">10</li><li style="color: rgb(153, 153, 153);">11</li><li style="color: rgb(153, 153, 153);">12</li><li style="color: rgb(153, 153, 153);">13</li><li style="color: rgb(153, 153, 153);">14</li><li style="color: rgb(153, 153, 153);">15</li><li style="color: rgb(153, 153, 153);">16</li><li style="color: rgb(153, 153, 153);">17</li><li style="color: rgb(153, 153, 153);">18</li><li style="color: rgb(153, 153, 153);">19</li><li style="color: rgb(153, 153, 153);">20</li><li style="color: rgb(153, 153, 153);">21</li><li style="color: rgb(153, 153, 153);">22</li><li style="color: rgb(153, 153, 153);">23</li><li style="color: rgb(153, 153, 153);">24</li><li style="color: rgb(153, 153, 153);">25</li><li style="color: rgb(153, 153, 153);">26</li><li style="color: rgb(153, 153, 153);">27</li><li style="color: rgb(153, 153, 153);">28</li><li style="color: rgb(153, 153, 153);">29</li><li style="color: rgb(153, 153, 153);">30</li><li style="color: rgb(153, 153, 153);">31</li><li style="color: rgb(153, 153, 153);">32</li><li style="color: rgb(153, 153, 153);">33</li><li style="color: rgb(153, 153, 153);">34</li><li style="color: rgb(153, 153, 153);">35</li><li style="color: rgb(153, 153, 153);">36</li><li style="color: rgb(153, 153, 153);">37</li><li style="color: rgb(153, 153, 153);">38</li><li style="color: rgb(153, 153, 153);">39</li><li style="color: rgb(153, 153, 153);">40</li><li style="color: rgb(153, 153, 153);">41</li><li style="color: rgb(153, 153, 153);">42</li><li style="color: rgb(153, 153, 153);">43</li><li style="color: rgb(153, 153, 153);">44</li><li style="color: rgb(153, 153, 153);">45</li><li style="color: rgb(153, 153, 153);">46</li><li style="color: rgb(153, 153, 153);">47</li><li style="color: rgb(153, 153, 153);">48</li><li style="color: rgb(153, 153, 153);">49</li><li style="color: rgb(153, 153, 153);">50</li><li style="color: rgb(153, 153, 153);">51</li><li style="color: rgb(153, 153, 153);">52</li><li style="color: rgb(153, 153, 153);">53</li><li style="color: rgb(153, 153, 153);">54</li><li style="color: rgb(153, 153, 153);">55</li><li style="color: rgb(153, 153, 153);">56</li><li style="color: rgb(153, 153, 153);">57</li><li style="color: rgb(153, 153, 153);">58</li><li style="color: rgb(153, 153, 153);">59</li><li style="color: rgb(153, 153, 153);">60</li><li style="color: rgb(153, 153, 153);">61</li><li style="color: rgb(153, 153, 153);">62</li><li style="color: rgb(153, 153, 153);">63</li></ul></pre> 
+<p>让我们用关于拿破仑的 726 个标记的较长文本来尝试一下。我们目前正在将文本拆分为跨度长的 128 个标记。</p> 
+<pre data-index="9" class="prettyprint set-code-show"><code class="has-numbering" onclick="mdcp.copyCode(event)" style="position: unset;">text = """
+Napoleon Bonaparte (born Napoleone di Buonaparte; 15 August 1769 – 5 May 1821), and later known by his regnal name Napoleon I, was a French military and political leader who rose to prominence during the French Revolution and led several successful campaigns during the Revolutionary Wars. He was the de facto leader of the French Republic as First Consul from 1799 to 1804. As Napoleon I, he was Emperor of the French from 1804 until 1814 and again in 1815. Napoleon's political and cultural legacy has endured, and he has been one of the most celebrated and controversial leaders in world history. Napoleon was born on the island of Corsica not long after its annexation by the Kingdom of France.[5] He supported the French Revolution in 1789 while serving in the French army, and tried to spread its ideals to his native Corsica. He rose rapidly in the Army after he saved the governing French Directory by firing on royalist insurgents. In 1796, he began a military campaign against the Austrians and their Italian allies, scoring decisive victories and becoming a national hero. Two years later, he led a military expedition to Egypt that served as a springboard to political power. He engineered a coup in November 1799 and became First Consul of the Republic. Differences with the British meant that the French faced the War of the Third Coalition by 1805. Napoleon shattered this coalition with victories in the Ulm Campaign, and at the Battle of Austerlitz, which led to the dissolving of the Holy Roman Empire. In 1806, the Fourth Coalition took up arms against him because Prussia became worried about growing French influence on the continent. Napoleon knocked out Prussia at the battles of Jena and Auerstedt, marched the Grande Armée into Eastern Europe, annihilating the Russians in June 1807 at Friedland, and forcing the defeated nations of the Fourth Coalition to accept the Treaties of Tilsit. Two years later, the Austrians challenged the French again during the War of the Fifth Coalition, but Napoleon solidified his grip over Europe after triumphing at the Battle of Wagram. Hoping to extend the Continental System, his embargo against Britain, Napoleon invaded the Iberian Peninsula and declared his brother Joseph King of Spain in 1808. The Spanish and the Portuguese revolted in the Peninsular War, culminating in defeat for Napoleon's marshals. Napoleon launched an invasion of Russia in the summer of 1812. The resulting campaign witnessed the catastrophic retreat of Napoleon's Grande Armée. In 1813, Prussia and Austria joined Russian forces in a Sixth Coalition against France. A chaotic military campaign resulted in a large coalition army defeating Napoleon at the Battle of Leipzig in October 1813. The coalition invaded France and captured Paris, forcing Napoleon to abdicate in April 1814. He was exiled to the island of Elba, between Corsica and Italy. In France, the Bourbons were restored to power. However, Napoleon escaped Elba in February 1815 and took control of France.[6][7] The Allies responded by forming a Seventh Coalition, which defeated Napoleon at the Battle of Waterloo in June 1815. The British exiled him to the remote island of Saint Helena in the Atlantic, where he died in 1821 at the age of 51. Napoleon had an extensive impact on the modern world, bringing liberal reforms to the many countries he conquered, especially the Low Countries, Switzerland, and parts of modern Italy and Germany. He implemented liberal policies in France and Western Europe.
+"""
+
+kb = from_text_to_kb(text, verbose=True)
+kb.print()
+# Input has 726 tokens
+# Input has 6 spans
+# Span boundaries are [[0, 128], [119, 247], [238, 366], [357, 485], [476, 604], [595, 723]]
+# Relations:
+#   {'head': 'Napoleon Bonaparte', 'type': 'date of birth',
+#    'tail': '15 August 1769', 'meta': {'spans': [[0, 128]]}}
+#   ...
+#   {'head': 'Napoleon', 'type': 'place of birth',
+#    'tail': 'Corsica', 'meta': {'spans': [[119, 247]]}}
+#   ...
+#   {'head': 'Fourth Coalition', 'type': 'start time',
+#    'tail': '1806', 'meta': {'spans': [[238, 366]]}}
+#   ...
+<div class="hljs-button {2}" data-title="复制"></div></code><ul class="pre-numbering" style=""><li style="color: rgb(153, 153, 153);">1</li><li style="color: rgb(153, 153, 153);">2</li><li style="color: rgb(153, 153, 153);">3</li><li style="color: rgb(153, 153, 153);">4</li><li style="color: rgb(153, 153, 153);">5</li><li style="color: rgb(153, 153, 153);">6</li><li style="color: rgb(153, 153, 153);">7</li><li style="color: rgb(153, 153, 153);">8</li><li style="color: rgb(153, 153, 153);">9</li><li style="color: rgb(153, 153, 153);">10</li><li style="color: rgb(153, 153, 153);">11</li><li style="color: rgb(153, 153, 153);">12</li><li style="color: rgb(153, 153, 153);">13</li><li style="color: rgb(153, 153, 153);">14</li><li style="color: rgb(153, 153, 153);">15</li><li style="color: rgb(153, 153, 153);">16</li><li style="color: rgb(153, 153, 153);">17</li><li style="color: rgb(153, 153, 153);">18</li><li style="color: rgb(153, 153, 153);">19</li></ul></pre> 
+<p>文本被分成六个跨度，从中提取了 23 个关系！请注意，我们还知道每个关系来自哪个文本跨度。</p> 
+<h2><a name="t8"></a><a id="_366"></a>过滤和规范化实体</h2> 
+<p>如果您仔细查看提取的关系，您会发现存在与实体“Napoleon Bonaparte”的关系和与实体“Napoleon”的关系。我们如何告诉我们的知识库这两个实体应该被视为相同？</p> 
+<p>一种方法是使用wikipedia库来检查“Napoleon Bonaparte”和“Napoleon”是否具有相同的 Wikipedia 页面。如果是这样，它们将被标准化为维基百科页面的标题。如果提取的实体没有对应的 Wikipedia 页面，我们现在忽略它。此步骤通常称为实体链接。</p> 
+<p>请注意，这种方法依赖于具有相关实体的人不断更新 Wikipedia。因此，如果您想提取与 Wikipedia 中已经存在的实体不同的实体，它将不起作用。此外，请注意，为简单起见，我们忽略了“日期”（例如15 August 1769in &lt;Napoleon, date of birth, 15 August 1769&gt;）实体。</p> 
+<p>让我们修改我们的KB代码：</p> 
+<p>现在KB存储entities带有存储关系实体的字典。键是实体标识符（即相应维基百科页面的标题），值是包含维基百科页面url及其summary.<br> 添加新关系时，我们现在使用wikipedia库检查其实体。</p> 
+<pre data-index="10" class="prettyprint set-code-show"><code class="has-numbering" onclick="mdcp.copyCode(event)" style="position: unset;">class KB():
+    def __init__(self):
+        self.entities = {}
+        self.relations = []
+
+    ...
+
+    def get_wikipedia_data(self, candidate_entity):
+        try:
+            page = wikipedia.page(candidate_entity, auto_suggest=False)
+            entity_data = {
+                "title": page.title,
+                "url": page.url,
+                "summary": page.summary
+            }
+            return entity_data
+        except:
+            return None
+
+    def add_entity(self, e):
+        self.entities[e["title"]] = {k:v for k,v in e.items() if k != "title"}
+
+    def add_relation(self, r):
+        # check on wikipedia
+        candidate_entities = [r["head"], r["tail"]]
+        entities = [self.get_wikipedia_data(ent) for ent in candidate_entities]
+
+        # if one entity does not exist, stop
+        if any(ent is None for ent in entities):
+            return
+
+        # manage new entities
+        for e in entities:
+            self.add_entity(e)
+
+        # rename relation entities with their wikipedia titles
+        r["head"] = entities[0]["title"]
+        r["tail"] = entities[1]["title"]
+
+        # manage new relation
+        if not self.exists_relation(r):
+            self.relations.append(r)
+        else:
+            self.merge_relations(r)
+
+    def print(self):
+        print("Entities:")
+        for e in self.entities.items():
+            print(f"  {e}")
+        print("Relations:")
+        for r in self.relations:
+            print(f"  {r}")
+<div class="hljs-button {2}" data-title="复制"></div></code><ul class="pre-numbering" style=""><li style="color: rgb(153, 153, 153);">1</li><li style="color: rgb(153, 153, 153);">2</li><li style="color: rgb(153, 153, 153);">3</li><li style="color: rgb(153, 153, 153);">4</li><li style="color: rgb(153, 153, 153);">5</li><li style="color: rgb(153, 153, 153);">6</li><li style="color: rgb(153, 153, 153);">7</li><li style="color: rgb(153, 153, 153);">8</li><li style="color: rgb(153, 153, 153);">9</li><li style="color: rgb(153, 153, 153);">10</li><li style="color: rgb(153, 153, 153);">11</li><li style="color: rgb(153, 153, 153);">12</li><li style="color: rgb(153, 153, 153);">13</li><li style="color: rgb(153, 153, 153);">14</li><li style="color: rgb(153, 153, 153);">15</li><li style="color: rgb(153, 153, 153);">16</li><li style="color: rgb(153, 153, 153);">17</li><li style="color: rgb(153, 153, 153);">18</li><li style="color: rgb(153, 153, 153);">19</li><li style="color: rgb(153, 153, 153);">20</li><li style="color: rgb(153, 153, 153);">21</li><li style="color: rgb(153, 153, 153);">22</li><li style="color: rgb(153, 153, 153);">23</li><li style="color: rgb(153, 153, 153);">24</li><li style="color: rgb(153, 153, 153);">25</li><li style="color: rgb(153, 153, 153);">26</li><li style="color: rgb(153, 153, 153);">27</li><li style="color: rgb(153, 153, 153);">28</li><li style="color: rgb(153, 153, 153);">29</li><li style="color: rgb(153, 153, 153);">30</li><li style="color: rgb(153, 153, 153);">31</li><li style="color: rgb(153, 153, 153);">32</li><li style="color: rgb(153, 153, 153);">33</li><li style="color: rgb(153, 153, 153);">34</li><li style="color: rgb(153, 153, 153);">35</li><li style="color: rgb(153, 153, 153);">36</li><li style="color: rgb(153, 153, 153);">37</li><li style="color: rgb(153, 153, 153);">38</li><li style="color: rgb(153, 153, 153);">39</li><li style="color: rgb(153, 153, 153);">40</li><li style="color: rgb(153, 153, 153);">41</li><li style="color: rgb(153, 153, 153);">42</li><li style="color: rgb(153, 153, 153);">43</li><li style="color: rgb(153, 153, 153);">44</li><li style="color: rgb(153, 153, 153);">45</li><li style="color: rgb(153, 153, 153);">46</li><li style="color: rgb(153, 153, 153);">47</li><li style="color: rgb(153, 153, 153);">48</li><li style="color: rgb(153, 153, 153);">49</li><li style="color: rgb(153, 153, 153);">50</li><li style="color: rgb(153, 153, 153);">51</li><li style="color: rgb(153, 153, 153);">52</li></ul></pre> 
+<p>让我们从关于拿破仑的同一文本中提取关系和实体：</p> 
+<pre data-index="11" class="prettyprint set-code-show"><code class="has-numbering" onclick="mdcp.copyCode(event)" style="position: unset;">text = """
+Napoleon Bonaparte (born Napoleone di Buonaparte; 15 August 1769 – 5 May 1821), and later known by his regnal name Napoleon I, was a French military and political leader who rose to prominence during the French Revolution and led several successful campaigns during the Revolutionary Wars. He was the de facto leader of the French Republic as First Consul from 1799 to 1804. As Napoleon I, he was Emperor of the French from 1804 until 1814 and again in 1815. Napoleon's political and cultural legacy has endured, and he has been one of the most celebrated and controversial leaders in world history. Napoleon was born on the island of Corsica not long after its annexation by the Kingdom of France.[5] He supported the French Revolution in 1789 while serving in the French army, and tried to spread its ideals to his native Corsica. He rose rapidly in the Army after he saved the governing French Directory by firing on royalist insurgents. In 1796, he began a military campaign against the Austrians and their Italian allies, scoring decisive victories and becoming a national hero. Two years later, he led a military expedition to Egypt that served as a springboard to political power. He engineered a coup in November 1799 and became First Consul of the Republic. Differences with the British meant that the French faced the War of the Third Coalition by 1805. Napoleon shattered this coalition with victories in the Ulm Campaign, and at the Battle of Austerlitz, which led to the dissolving of the Holy Roman Empire. In 1806, the Fourth Coalition took up arms against him because Prussia became worried about growing French influence on the continent. Napoleon knocked out Prussia at the battles of Jena and Auerstedt, marched the Grande Armée into Eastern Europe, annihilating the Russians in June 1807 at Friedland, and forcing the defeated nations of the Fourth Coalition to accept the Treaties of Tilsit. Two years later, the Austrians challenged the French again during the War of the Fifth Coalition, but Napoleon solidified his grip over Europe after triumphing at the Battle of Wagram. Hoping to extend the Continental System, his embargo against Britain, Napoleon invaded the Iberian Peninsula and declared his brother Joseph King of Spain in 1808. The Spanish and the Portuguese revolted in the Peninsular War, culminating in defeat for Napoleon's marshals. Napoleon launched an invasion of Russia in the summer of 1812. The resulting campaign witnessed the catastrophic retreat of Napoleon's Grande Armée. In 1813, Prussia and Austria joined Russian forces in a Sixth Coalition against France. A chaotic military campaign resulted in a large coalition army defeating Napoleon at the Battle of Leipzig in October 1813. The coalition invaded France and captured Paris, forcing Napoleon to abdicate in April 1814. He was exiled to the island of Elba, between Corsica and Italy. In France, the Bourbons were restored to power. However, Napoleon escaped Elba in February 1815 and took control of France.[6][7] The Allies responded by forming a Seventh Coalition, which defeated Napoleon at the Battle of Waterloo in June 1815. The British exiled him to the remote island of Saint Helena in the Atlantic, where he died in 1821 at the age of 51. Napoleon had an extensive impact on the modern world, bringing liberal reforms to the many countries he conquered, especially the Low Countries, Switzerland, and parts of modern Italy and Germany. He implemented liberal policies in France and Western Europe.
+"""
+
+kb = from_text_to_kb(text)
+kb.print()
+# Entities:
+#  ('Napoleon', {'url': 'https://en.wikipedia.org/wiki/Napoleon',
+#   'summary': "Napoleon Bonaparte (born Napoleone di Buonaparte; 15 August ..."})
+#  ('French Revolution', {'url': 'https://en.wikipedia.org/wiki/French_Revolution',
+#   'summary': 'The French Revolution (French: Révolution française..."})
+#  ...
+# Relations:
+#  {'head': 'Napoleon', 'type': 'participant in', 'tail': 'French Revolution',
+#   'meta': {'spans': [[0, 128], [119, 247]]}}
+#  {'head': 'French Revolution', 'type': 'participant', 'tail': 'Napoleon',
+#   'meta': {'spans': [[0, 128]]}}
+#  ...
+<div class="hljs-button {2}" data-title="复制"></div></code><ul class="pre-numbering" style=""><li style="color: rgb(153, 153, 153);">1</li><li style="color: rgb(153, 153, 153);">2</li><li style="color: rgb(153, 153, 153);">3</li><li style="color: rgb(153, 153, 153);">4</li><li style="color: rgb(153, 153, 153);">5</li><li style="color: rgb(153, 153, 153);">6</li><li style="color: rgb(153, 153, 153);">7</li><li style="color: rgb(153, 153, 153);">8</li><li style="color: rgb(153, 153, 153);">9</li><li style="color: rgb(153, 153, 153);">10</li><li style="color: rgb(153, 153, 153);">11</li><li style="color: rgb(153, 153, 153);">12</li><li style="color: rgb(153, 153, 153);">13</li><li style="color: rgb(153, 153, 153);">14</li><li style="color: rgb(153, 153, 153);">15</li><li style="color: rgb(153, 153, 153);">16</li><li style="color: rgb(153, 153, 153);">17</li><li style="color: rgb(153, 153, 153);">18</li></ul></pre> 
+<p>所有提取的实体都链接到 Wikipedia 页面并使用它们的标题进行规范化。“拿破仑波拿巴”和“拿破仑”现在都被称为“拿破仑”！</p> 
+<h2><a name="t9"></a><a id="_URL__458"></a>从 URL 上的文章到知识库</h2> 
+<p>让我们更进一步。我们希望我们的知识库能够管理来自网络文章的关系和实体的添加，并跟踪每个关系的来源。</p> 
+<p>为此，我们需要修改我们的KB类，以便：</p> 
+<p>和relations, entities（sources即来自网络的文章）也被存储。每篇文章都有它的 URL 作为键和一个带有键article_title和article_publish_date值的字典。稍后我们将看到如何提取这两个特征。<br> 当我们向知识库添加新关系时，关系meta字段现在是一个字典，其中文章 URL 作为键，另一个字典包含spansas 值。以这种方式，知识库跟踪已从中提取特定关系的所有文章。该信息可以是所提取关系质量的指标。</p> 
+<pre data-index="12" class="prettyprint set-code-show"><code class="has-numbering" onclick="mdcp.copyCode(event)" style="position: unset;">class KB():
+    def __init__(self):
+        self.entities = {} # { entity_title: {...} }
+        self.relations = [] # [ head: entity_title, type: ..., tail: entity_title,
+          # meta: { article_url: { spans: [...] } } ]
+        self.sources = {} # { article_url: {...} }
+
+    ...
+
+    def merge_relations(self, r2):
+        r1 = [r for r in self.relations
+              if self.are_relations_equal(r2, r)][0]
+
+        # if different article
+        article_url = list(r2["meta"].keys())[0]
+        if article_url not in r1["meta"]:
+            r1["meta"][article_url] = r2["meta"][article_url]
+
+        # if existing article
+        else:
+            spans_to_add = [span for span in r2["meta"][article_url]["spans"]
+                            if span not in r1["meta"][article_url]["spans"]]
+            r1["meta"][article_url]["spans"] += spans_to_add
+
+    ...
+
+    def add_relation(self, r, article_title, article_publish_date):
+        # check on wikipedia
+        candidate_entities = [r["head"], r["tail"]]
+        entities = [self.get_wikipedia_data(ent) for ent in candidate_entities]
+
+        # if one entity does not exist, stop
+        if any(ent is None for ent in entities):
+            return
+
+        # manage new entities
+        for e in entities:
+            self.add_entity(e)
+
+        # rename relation entities with their wikipedia titles
+        r["head"] = entities[0]["title"]
+        r["tail"] = entities[1]["title"]
+
+        # add source if not in kb
+        article_url = list(r["meta"].keys())[0]
+        if article_url not in self.sources:
+            self.sources[article_url] = {
+                "article_title": article_title,
+                "article_publish_date": article_publish_date
+            }
+
+        # manage new relation
+        if not self.exists_relation(r):
+            self.relations.append(r)
+        else:
+            self.merge_relations(r)
+
+    def print(self):
+        print("Entities:")
+        for e in self.entities.items():
+            print(f"  {e}")
+        print("Relations:")
+        for r in self.relations:
+            print(f"  {r}")
+        print("Sources:")
+        for s in self.sources.items():
+            print(f"  {s}")
+<div class="hljs-button {2}" data-title="复制"></div></code><ul class="pre-numbering" style=""><li style="color: rgb(153, 153, 153);">1</li><li style="color: rgb(153, 153, 153);">2</li><li style="color: rgb(153, 153, 153);">3</li><li style="color: rgb(153, 153, 153);">4</li><li style="color: rgb(153, 153, 153);">5</li><li style="color: rgb(153, 153, 153);">6</li><li style="color: rgb(153, 153, 153);">7</li><li style="color: rgb(153, 153, 153);">8</li><li style="color: rgb(153, 153, 153);">9</li><li style="color: rgb(153, 153, 153);">10</li><li style="color: rgb(153, 153, 153);">11</li><li style="color: rgb(153, 153, 153);">12</li><li style="color: rgb(153, 153, 153);">13</li><li style="color: rgb(153, 153, 153);">14</li><li style="color: rgb(153, 153, 153);">15</li><li style="color: rgb(153, 153, 153);">16</li><li style="color: rgb(153, 153, 153);">17</li><li style="color: rgb(153, 153, 153);">18</li><li style="color: rgb(153, 153, 153);">19</li><li style="color: rgb(153, 153, 153);">20</li><li style="color: rgb(153, 153, 153);">21</li><li style="color: rgb(153, 153, 153);">22</li><li style="color: rgb(153, 153, 153);">23</li><li style="color: rgb(153, 153, 153);">24</li><li style="color: rgb(153, 153, 153);">25</li><li style="color: rgb(153, 153, 153);">26</li><li style="color: rgb(153, 153, 153);">27</li><li style="color: rgb(153, 153, 153);">28</li><li style="color: rgb(153, 153, 153);">29</li><li style="color: rgb(153, 153, 153);">30</li><li style="color: rgb(153, 153, 153);">31</li><li style="color: rgb(153, 153, 153);">32</li><li style="color: rgb(153, 153, 153);">33</li><li style="color: rgb(153, 153, 153);">34</li><li style="color: rgb(153, 153, 153);">35</li><li style="color: rgb(153, 153, 153);">36</li><li style="color: rgb(153, 153, 153);">37</li><li style="color: rgb(153, 153, 153);">38</li><li style="color: rgb(153, 153, 153);">39</li><li style="color: rgb(153, 153, 153);">40</li><li style="color: rgb(153, 153, 153);">41</li><li style="color: rgb(153, 153, 153);">42</li><li style="color: rgb(153, 153, 153);">43</li><li style="color: rgb(153, 153, 153);">44</li><li style="color: rgb(153, 153, 153);">45</li><li style="color: rgb(153, 153, 153);">46</li><li style="color: rgb(153, 153, 153);">47</li><li style="color: rgb(153, 153, 153);">48</li><li style="color: rgb(153, 153, 153);">49</li><li style="color: rgb(153, 153, 153);">50</li><li style="color: rgb(153, 153, 153);">51</li><li style="color: rgb(153, 153, 153);">52</li><li style="color: rgb(153, 153, 153);">53</li><li style="color: rgb(153, 153, 153);">54</li><li style="color: rgb(153, 153, 153);">55</li><li style="color: rgb(153, 153, 153);">56</li><li style="color: rgb(153, 153, 153);">57</li><li style="color: rgb(153, 153, 153);">58</li><li style="color: rgb(153, 153, 153);">59</li><li style="color: rgb(153, 153, 153);">60</li><li style="color: rgb(153, 153, 153);">61</li><li style="color: rgb(153, 153, 153);">62</li><li style="color: rgb(153, 153, 153);">63</li><li style="color: rgb(153, 153, 153);">64</li><li style="color: rgb(153, 153, 153);">65</li><li style="color: rgb(153, 153, 153);">66</li><li style="color: rgb(153, 153, 153);">67</li></ul></pre> 
+<p>接下来，我们修改from_text_to_kb函数，以便它准备关系meta字段，同时考​​虑文章 URL。</p> 
+<pre data-index="13" class="prettyprint set-code-show"><code class="has-numbering" onclick="mdcp.copyCode(event)" style="position: unset;">def from_text_to_kb(text, article_url, span_length=128, article_title=None,
+                    article_publish_date=None, verbose=False):
+    ...
+    # create kb
+    kb = KB()
+    i = 0
+    for sentence_pred in decoded_preds:
+        current_span_index = i // num_return_sequences
+        relations = extract_relations_from_model_output(sentence_pred)
+        for relation in relations:
+            relation["meta"] = {
+                article_url: {
+                    "spans": [spans_boundaries[current_span_index]]
+                }
+            }
+            kb.add_relation(relation, article_title, article_publish_date)
+        i += 1
+
+    return kb
+<div class="hljs-button {2}" data-title="复制"></div></code><ul class="pre-numbering" style=""><li style="color: rgb(153, 153, 153);">1</li><li style="color: rgb(153, 153, 153);">2</li><li style="color: rgb(153, 153, 153);">3</li><li style="color: rgb(153, 153, 153);">4</li><li style="color: rgb(153, 153, 153);">5</li><li style="color: rgb(153, 153, 153);">6</li><li style="color: rgb(153, 153, 153);">7</li><li style="color: rgb(153, 153, 153);">8</li><li style="color: rgb(153, 153, 153);">9</li><li style="color: rgb(153, 153, 153);">10</li><li style="color: rgb(153, 153, 153);">11</li><li style="color: rgb(153, 153, 153);">12</li><li style="color: rgb(153, 153, 153);">13</li><li style="color: rgb(153, 153, 153);">14</li><li style="color: rgb(153, 153, 153);">15</li><li style="color: rgb(153, 153, 153);">16</li><li style="color: rgb(153, 153, 153);">17</li><li style="color: rgb(153, 153, 153);">18</li><li style="color: rgb(153, 153, 153);">19</li></ul></pre> 
+<p>最后，我们使用该newspaper库从 URL 下载和解析文章并定义一个from_url_to_kb函数。图书馆会自动提取文章文本、标题和发布日期（如果存在）。</p> 
+<pre data-index="14" class="set-code-show prettyprint"><code class="has-numbering" onclick="mdcp.copyCode(event)" style="position: unset;">def get_article(url):
+    article = Article(url)
+    article.download()
+    article.parse()
+    return article
+
+def from_url_to_kb(url):
+    article = get_article(url)
+    config = {
+        "article_title": article.title,
+        "article_publish_date": article.publish_date
+    }
+    kb = from_text_to_kb(article.text, article.url, **config)
+    return kb
+<div class="hljs-button {2}" data-title="复制"></div></code><ul class="pre-numbering" style=""><li style="color: rgb(153, 153, 153);">1</li><li style="color: rgb(153, 153, 153);">2</li><li style="color: rgb(153, 153, 153);">3</li><li style="color: rgb(153, 153, 153);">4</li><li style="color: rgb(153, 153, 153);">5</li><li style="color: rgb(153, 153, 153);">6</li><li style="color: rgb(153, 153, 153);">7</li><li style="color: rgb(153, 153, 153);">8</li><li style="color: rgb(153, 153, 153);">9</li><li style="color: rgb(153, 153, 153);">10</li><li style="color: rgb(153, 153, 153);">11</li><li style="color: rgb(153, 153, 153);">12</li><li style="color: rgb(153, 153, 153);">13</li><li style="color: rgb(153, 153, 153);">14</li></ul></pre> 
+<p>让我们尝试从文章Microstrategy Chief中提取一个知识库。</p> 
+<pre data-index="15" class="prettyprint set-code-show"><code class="has-numbering" onclick="mdcp.copyCode(event)" style="position: unset;">url = "https://finance.yahoo.com/news/microstrategy-bitcoin-millions-142143795.html"
+kb = from_url_to_kb(url)
+kb.print()
+# Entities:
+#   ('MicroStrategy', {'url': 'https://en.wikipedia.org/wiki/MicroStrategy',
+#     'summary': "MicroStrategy Incorporated is an American company that ..."})
+#   ('Michael J. Saylor', {'url': 'https://en.wikipedia.org/wiki/Michael_J._Saylor',
+#     'summary': 'Michael J. Saylor (born February 4, 1965) is an American ..."})
+#   ...
+# Relations:
+#   {'head': 'MicroStrategy', 'type': 'founded by', 'tail': 'Michael J. Saylor',
+#    'meta': {'https://finance.yahoo.com/news/microstrategy-bitcoin-millions-142143795.html': 
+#      {'spans': [[0, 128]]}}}
+#   {'head': 'Michael J. Saylor', 'type': 'employer', 'tail': 'MicroStrategy',
+#    'meta': {'https://finance.yahoo.com/news/microstrategy-bitcoin-millions-142143795.html':
+#      {'spans': [[0, 128]]}}}
+#   ...
+# Sources:
+#   ('https://finance.yahoo.com/news/microstrategy-bitcoin-millions-142143795.html',
+#     {'article_title': "Microstrategy chief: 'Bitcoin is going to go into the millions'",
+#      'article_publish_date': None})
+<div class="hljs-button {2}" data-title="复制"></div></code><ul class="pre-numbering" style=""><li style="color: rgb(153, 153, 153);">1</li><li style="color: rgb(153, 153, 153);">2</li><li style="color: rgb(153, 153, 153);">3</li><li style="color: rgb(153, 153, 153);">4</li><li style="color: rgb(153, 153, 153);">5</li><li style="color: rgb(153, 153, 153);">6</li><li style="color: rgb(153, 153, 153);">7</li><li style="color: rgb(153, 153, 153);">8</li><li style="color: rgb(153, 153, 153);">9</li><li style="color: rgb(153, 153, 153);">10</li><li style="color: rgb(153, 153, 153);">11</li><li style="color: rgb(153, 153, 153);">12</li><li style="color: rgb(153, 153, 153);">13</li><li style="color: rgb(153, 153, 153);">14</li><li style="color: rgb(153, 153, 153);">15</li><li style="color: rgb(153, 153, 153);">16</li><li style="color: rgb(153, 153, 153);">17</li><li style="color: rgb(153, 153, 153);">18</li><li style="color: rgb(153, 153, 153);">19</li><li style="color: rgb(153, 153, 153);">20</li><li style="color: rgb(153, 153, 153);">21</li></ul></pre> 
+<p>KB 显示了很多信息！</p> 
+<p>从entities列表中，我们看到Microstrategy是一家美国公司。<br> 从relations列表中，我们看到Michael J. Saylor是 Microstrategy 公司的创始人，我们在哪里提取了这种关系（即文章 URL 和文本跨度）。<br> 从sources列表中，我们可以看到上述文章的标题和发布日期。</p> 
+<h2><a name="t10"></a><a id="_612"></a>从多篇文章到知识库</h2> 
+<p>我们快完成了！考虑最后一个场景：从多篇文章创建知识库。我们可以通过从每篇文章中提取一个单独的知识库，然后将所有知识库合并在一起来处理它。让我们为我们的类添加一个merge_with_kb方法KB。</p> 
+<pre data-index="16" class="set-code-show prettyprint"><code class="has-numbering" onclick="mdcp.copyCode(event)" style="position: unset;">class KB():
+    ...
+
+    def merge_with_kb(self, kb2):
+        for r in kb2.relations:
+            article_url = list(r["meta"].keys())[0]
+            source_data = kb2.sources[article_url]
+            self.add_relation(r, source_data["article_title"],
+                              source_data["article_publish_date"])
+            
+    ...
+<div class="hljs-button {2}" data-title="复制"></div></code><ul class="pre-numbering" style=""><li style="color: rgb(153, 153, 153);">1</li><li style="color: rgb(153, 153, 153);">2</li><li style="color: rgb(153, 153, 153);">3</li><li style="color: rgb(153, 153, 153);">4</li><li style="color: rgb(153, 153, 153);">5</li><li style="color: rgb(153, 153, 153);">6</li><li style="color: rgb(153, 153, 153);">7</li><li style="color: rgb(153, 153, 153);">8</li><li style="color: rgb(153, 153, 153);">9</li><li style="color: rgb(153, 153, 153);">10</li><li style="color: rgb(153, 153, 153);">11</li></ul></pre> 
+<p>然后，我们使用该GoogleNews库来获取有关特定主题的最新新闻文章的 URL。一旦我们有多个 URL，我们将它们提供给该from_urls_to_kb函数，该函数从每篇文章中提取一个知识库，然后将它们合并在一起。</p> 
+<pre data-index="17" class="prettyprint set-code-show"><code class="has-numbering" onclick="mdcp.copyCode(event)" style="position: unset;">def get_news_links(query, lang="en", region="US", pages=1, max_links=100000):
+    googlenews = GoogleNews(lang=lang, region=region)
+    googlenews.search(query)
+    all_urls = []
+    for page in range(pages):
+        googlenews.get_page(page)
+        all_urls += googlenews.get_links()
+    return list(set(all_urls))[:max_links]
+
+def from_urls_to_kb(urls, verbose=False):
+    kb = KB()
+    if verbose:
+        print(f"{len(urls)} links to visit")
+    for url in urls:
+        if verbose:
+            print(f"Visiting {url}...")
+        try:
+            kb_url = from_url_to_kb(url)
+            kb.merge_with_kb(kb_url)
+        except ArticleException:
+            if verbose:
+                print(f"  Couldn't download article at url {url}")
+    return kb
+<div class="hljs-button {2}" data-title="复制"></div></code><ul class="pre-numbering" style=""><li style="color: rgb(153, 153, 153);">1</li><li style="color: rgb(153, 153, 153);">2</li><li style="color: rgb(153, 153, 153);">3</li><li style="color: rgb(153, 153, 153);">4</li><li style="color: rgb(153, 153, 153);">5</li><li style="color: rgb(153, 153, 153);">6</li><li style="color: rgb(153, 153, 153);">7</li><li style="color: rgb(153, 153, 153);">8</li><li style="color: rgb(153, 153, 153);">9</li><li style="color: rgb(153, 153, 153);">10</li><li style="color: rgb(153, 153, 153);">11</li><li style="color: rgb(153, 153, 153);">12</li><li style="color: rgb(153, 153, 153);">13</li><li style="color: rgb(153, 153, 153);">14</li><li style="color: rgb(153, 153, 153);">15</li><li style="color: rgb(153, 153, 153);">16</li><li style="color: rgb(153, 153, 153);">17</li><li style="color: rgb(153, 153, 153);">18</li><li style="color: rgb(153, 153, 153);">19</li><li style="color: rgb(153, 153, 153);">20</li><li style="color: rgb(153, 153, 153);">21</li><li style="color: rgb(153, 153, 153);">22</li><li style="color: rgb(153, 153, 153);">23</li></ul></pre> 
+<p>让我们尝试从 Google 新闻中关于“Google”的三篇文章中提取知识库</p> 
+<pre data-index="18" class="prettyprint set-code-show"><code class="has-numbering" onclick="mdcp.copyCode(event)" style="position: unset;">news_links = get_news_links("Google", pages=1, max_links=3)
+kb = from_urls_to_kb(news_links, verbose=True)
+kb.print()
+# 3 links to visit
+# Visiting https://www.hindustantimes.com/india-news/google-doodle-celebrates-india-s-gama-pehlwan-the-undefeated-wrestling-champion-101653180853982.html...
+# Visiting https://tech.hindustantimes.com/tech/news/google-doodle-today-celebrates-gama-pehlwan-s-144th-birth-anniversary-know-who-he-is-71653191916538.html...
+# Visiting https://www.moneycontrol.com/news/trends/current-affairs-trends/google-doodle-celebrates-gama-pehlwan-the-amritsar-born-wrestling-champ-who-inspired-bruce-lee-8552171.html...
+# Entities:
+#   ('Google', {'url': 'https://en.wikipedia.org/wiki/Google',
+#     'summary': 'Google LLC is an American ...'})
+#   ...
+# Relations:
+#   {'head': 'Google', 'type': 'owner of', 'tail': 'Google Doodle',
+#     'meta': {'https://tech.hindustantimes.com/tech/news/google-doodle-today-celebrates-gama-pehlwan-s-144th-birth-anniversary-know-who-he-is-71653191916538.html':
+#       {'spans': [[0, 128]]}}}
+#   ...
+# Sources:
+#   ('https://www.hindustantimes.com/india-news/google-doodle-celebrates-india-s-gama-pehlwan-the-undefeated-wrestling-champion-101653180853982.html',
+#     {'article_title': "Google Doodle celebrates India's Gama Pehlwan, the undefeated wrestling champion",
+#     'article_publish_date': datetime.datetime(2022, 5, 22, 6, 59, 56, tzinfo=tzoffset(None, 19800))})
+#   ('https://tech.hindustantimes.com/tech/news/google-doodle-today-celebrates-gama-pehlwan-s-144th-birth-anniversary-know-who-he-is-71653191916538.html',
+#     {'article_title': "Google Doodle today celebrates Gama Pehlwan's 144th birth anniversary; know who he is",
+#     'article_publish_date': datetime.datetime(2022, 5, 22, 9, 32, 38, tzinfo=tzoffset(None, 19800))})
+#   ('https://www.moneycontrol.com/news/trends/current-affairs-trends/google-doodle-celebrates-gama-pehlwan-the-amritsar-born-wrestling-champ-who-inspired-bruce-lee-8552171.html',
+#     {'article_title': 'Google Doodle celebrates Gama Pehlwan, the Amritsar-born wrestling champ who inspired Bruce Lee',
+#     'article_publish_date': None})
+<div class="hljs-button {2}" data-title="复制"></div></code><ul class="pre-numbering" style=""><li style="color: rgb(153, 153, 153);">1</li><li style="color: rgb(153, 153, 153);">2</li><li style="color: rgb(153, 153, 153);">3</li><li style="color: rgb(153, 153, 153);">4</li><li style="color: rgb(153, 153, 153);">5</li><li style="color: rgb(153, 153, 153);">6</li><li style="color: rgb(153, 153, 153);">7</li><li style="color: rgb(153, 153, 153);">8</li><li style="color: rgb(153, 153, 153);">9</li><li style="color: rgb(153, 153, 153);">10</li><li style="color: rgb(153, 153, 153);">11</li><li style="color: rgb(153, 153, 153);">12</li><li style="color: rgb(153, 153, 153);">13</li><li style="color: rgb(153, 153, 153);">14</li><li style="color: rgb(153, 153, 153);">15</li><li style="color: rgb(153, 153, 153);">16</li><li style="color: rgb(153, 153, 153);">17</li><li style="color: rgb(153, 153, 153);">18</li><li style="color: rgb(153, 153, 153);">19</li><li style="color: rgb(153, 153, 153);">20</li><li style="color: rgb(153, 153, 153);">21</li><li style="color: rgb(153, 153, 153);">22</li><li style="color: rgb(153, 153, 153);">23</li><li style="color: rgb(153, 153, 153);">24</li><li style="color: rgb(153, 153, 153);">25</li><li style="color: rgb(153, 153, 153);">26</li></ul></pre> 
+<p>知识库越来越大！我们有 10 个实体、10 个关系和 3 个来源。请注意，我们知道每个关系来自哪篇文章。</p> 
+<h2><a name="t11"></a><a id="_688"></a>可视化知识库</h2> 
+<p>恭喜你读到这里，我们已经完成了这些场景！让我们通过绘制知识库来可视化我们工作的输出。由于我们的知识库是图表，我们可以使用该pyvis库，它允许创建交互式网络可视化。</p> 
+<p>我们定义了一个save_network_html函数：</p> 
+<p>初始化一个空的有向pyvis网络。<br> 将知识库实体添加为节点。<br> 将知识库关系添加为边。<br> 将网络保存在 HTML 文件中。</p> 
+<pre data-index="19" class="prettyprint set-code-show"><code class="has-numbering" onclick="mdcp.copyCode(event)" style="position: unset;">def save_network_html(kb, filename="network.html"):
+    # create network
+    net = Network(directed=True, width="700px", height="700px", bgcolor="#eeeeee")
+
+    # nodes
+    color_entity = "#00FF00"
+    for e in kb.entities:
+        net.add_node(e, shape="circle", color=color_entity)
+
+    # edges
+    for r in kb.relations:
+        net.add_edge(r["head"], r["tail"],
+                    title=r["type"], label=r["type"])
+        
+    # save network
+    net.repulsion(
+        node_distance=200,
+        central_gravity=0.2,
+        spring_length=200,
+        spring_strength=0.05,
+        damping=0.09
+    )
+    net.set_edge_smooth('dynamic')
+    net.show(filename)
+<div class="hljs-button {2}" data-title="复制"></div></code><ul class="pre-numbering" style=""><li style="color: rgb(153, 153, 153);">1</li><li style="color: rgb(153, 153, 153);">2</li><li style="color: rgb(153, 153, 153);">3</li><li style="color: rgb(153, 153, 153);">4</li><li style="color: rgb(153, 153, 153);">5</li><li style="color: rgb(153, 153, 153);">6</li><li style="color: rgb(153, 153, 153);">7</li><li style="color: rgb(153, 153, 153);">8</li><li style="color: rgb(153, 153, 153);">9</li><li style="color: rgb(153, 153, 153);">10</li><li style="color: rgb(153, 153, 153);">11</li><li style="color: rgb(153, 153, 153);">12</li><li style="color: rgb(153, 153, 153);">13</li><li style="color: rgb(153, 153, 153);">14</li><li style="color: rgb(153, 153, 153);">15</li><li style="color: rgb(153, 153, 153);">16</li><li style="color: rgb(153, 153, 153);">17</li><li style="color: rgb(153, 153, 153);">18</li><li style="color: rgb(153, 153, 153);">19</li><li style="color: rgb(153, 153, 153);">20</li><li style="color: rgb(153, 153, 153);">21</li><li style="color: rgb(153, 153, 153);">22</li><li style="color: rgb(153, 153, 153);">23</li><li style="color: rgb(153, 153, 153);">24</li></ul></pre> 
+<p>让我们使用由 20 篇有关“Google”save_network_html的新闻文章构建的知识库来尝试该功能。</p> 
+<pre data-index="20" class="set-code-show prettyprint"><code class="has-numbering" onclick="mdcp.copyCode(event)" style="position: unset;">news_links = get_news_links("Google", pages=5, max_links=20)
+kb = from_urls_to_kb(news_links, verbose=True)
+filename = "network_3_google.html"
+save_network_html(kb, filename=filename)
+IPython.display.HTML(filename=filename)
+<div class="hljs-button {2}" data-title="复制"></div></code><ul class="pre-numbering" style=""><li style="color: rgb(153, 153, 153);">1</li><li style="color: rgb(153, 153, 153);">2</li><li style="color: rgb(153, 153, 153);">3</li><li style="color: rgb(153, 153, 153);">4</li><li style="color: rgb(153, 153, 153);">5</li></ul></pre> 
+<p>这是结果图：</p> 
+<p><img src="https://img-blog.csdnimg.cn/0bbd6a9d7a104ba288ef42d68592b798.png" alt="在这里插入图片描述"></p> 
+<p>放大图表，我们看到与Google实体提取的许多关系。</p> 
+<p><img src="https://img-blog.csdnimg.cn/063ca501a0934c58b935279ccf497b35.png" alt="在这里插入图片描述"></p> 
+<p>请记住，即使它们没有可视化，知识图也会保存有关每个关系的出处的信息（例如，它是从哪些文章中提取的和其他元数据），以及有关每个实体的维基百科数据。可视化知识图对于调试目的很有用，但它们的主要好处是用于推理时。</p> 
+<p>您可以在此Colab中找到完整的代码。</p> 
+<h2><a name="t12"></a><a id="_Streamlit__Hugging_Face_Spaces_748"></a>使用 Streamlit 构建交互式演示并将其部署到 Hugging Face Spaces</h2> 
+<p>代码在我们的 Jupyter notebook 中运行良好，但如果我们想让其他非技术人员尝试我们的知识库提取管道怎么办？我们可以使用Streamlit构建一个小演示。</p> 
+<p>Streamlit 是一个 Python 库，它允许数据科学家轻松创建小型交互式演示，以便其他人可以测试他们的机器学习模型或查看他们的数据分析。查看Streamlit Gallery以了解可以使用该库做什么。</p> 
+<p>我不会详细介绍 Streamlit 的代码细节，但请放心，它非常易于使用且易于学习。我建议阅读Streamlit 文档，这需要几个小时。</p> 
+<p>查看这个repo以查看我们的 Streamlit 应用程序的完整代码。有两个主要组成部分：</p> 
+<p>该app.py文件：包含应用程序的 Streamlit 代码。这是我们创建一些交互式组件并编写逻辑以将它们与知识库提取管道连接的地方。<br> 该requirements.py文件：包含 Streamlit 应用程序中使用的所有 Python 库。无需将 Streamlit 库添加到此文件。<br> 一旦我们在本地测试了我们的 Streamlit 应用程序并且一切都按预期工作，我们需要将它上传到一个新的 Hugging Face Space。此步骤只需将 Streamlit 应用程序的文件复制到在 Hugging Face 帐户上创建的新存储库中即可。请参阅本文以了解如何在 Hugging Face Spaces 中托管您的 Streamlit 项目。</p> 
+<p>这是由此产生的拥抱面空间。有一些知识库示例已经加载到内存中，但也可以从自定义文本和 URL 中提取知识库。试试看！</p> 
+<p><img src="https://img-blog.csdnimg.cn/9df0f7354f8246d7a727d3ca9e262c50.png" alt="在这里插入图片描述"></p> 
+<p>使用 Streamlit 构建一个小型演示非常简单，并且与 Hugging Face Spaces 结合使用，可以让其他人测试您的工作，而无需了解如何运行 Jupyter notebook。</p> 
+<h2><a name="t13"></a><a id="_767"></a>注意事项和后续步骤</h2> 
+<p>如果仔细观察提取的知识图，有些关系是错误的。事实上，关系提取模型仍然远非完美，需要在管道中采取进一步的步骤才能从文本中构建可靠的知识图谱。将此演示视为一个开始步骤！</p> 
+<p>可能的后续步骤是：</p> 
+<p>管理类中的“日期”实体KB。<br> 使用句子边界作为跨度边界。<br> 测试其他 NER 和关系分类模型，例如OpenNRE。<br> 添加一个计算每个关系的质量指标的函数，同时考虑关系源。<br> 将KB课程与其他开源知识图谱集成，例如KBpedia。</p> 
+<h2><a name="t14"></a><a id="_779"></a>项目源码</h2> 
+<p>https://colab.research.google.com/drive/12gwdua-Fs7H31HIc5frzavT6ofyeLWux?usp=sharing</p> 
+<p>10rebel_ipynb.zip</p> 
+<p>链接:https://pan.baidu.com/s/1IAslu4Kt3tmU8nqAMrXhqg 密码:olww</p>
+                </div><div data-report-view="{&quot;mod&quot;:&quot;1585297308_001&quot;,&quot;spm&quot;:&quot;1001.2101.3001.6548&quot;,&quot;dest&quot;:&quot;https://swiftui.blog.csdn.net/article/details/126027071&quot;,&quot;extend1&quot;:&quot;pc&quot;,&quot;ab&quot;:&quot;new&quot;}"><div></div></div>
+                <link href="https://csdnimg.cn/release/blogv2/dist/mdeditor/css/editerView/markdown_views-f23dff6052.css" rel="stylesheet">
+                <link href="https://csdnimg.cn/release/blogv2/dist/mdeditor/css/style-c216769e99.css" rel="stylesheet">
+        </div>
+            </div> 
+            
+              </main>     
+       </body>
+       </html>
+    
+            
